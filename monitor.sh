@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##Variables
-VERSION=19.08.26.1
+VERSION=21.12.29.1
 SCRIPTDIR=$(pwd)
 TMPDIR=${SCRIPTDIR}/tmp
 
@@ -27,7 +27,7 @@ check_packages(){
 }
 
 debian_package_install(){
-    PACKAGES="snmp-mibs-downloader"
+    PACKAGES="snmp snmp-mibs-downloader"
     TOINSTALL=()
     for PKG in ${PACKAGES[@]}; do
         dpkg -s ${PKG} &> /dev/null
@@ -119,35 +119,35 @@ monitor_int(){
                 ININT=$(echo "${IN} * 100" | bc | cut -d. -f1)
                 OUTINT=$(echo "${OUT} * 100" | bc | cut -d. -f1)
 		if [ "${ININT}" -ge "${INRED}" ] || [ "${OUTINT}" -ge "${OUTRED}" ]; then
-			colorize RED "${TIME}\t|\tDownload: ${IN}Mbps\t|\tUpload: ${OUT}Mbps\n"
+			colorize RED "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
 		elif [ "${ININT}" -ge "${INYELLOW}" ] || [ "${OUTINT}" -ge "${OUTYELLOW}" ]; then
-			colorize YELLOW "${TIME}\t|\tDownload: ${IN}Mbps\t|\tUpload: ${OUT}Mbps\n"
+			colorize YELLOW "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
 		else
-			colorize GREEN "${TIME}\t|\tDownload: ${IN}Mbps\t|\tUpload: ${OUT}Mbps\n"
+			colorize GREEN "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
 		fi
 	done
 
 }
 
 get_thresholds(){
-echo "Please enter thresholds (in Mbps):"
 if [ -z ${1} ]; then
-        read -p "Download RED >=: " INRED
+	echo "Please enter thresholds (in Mbps):"
+        read -p "Input RED >=: " INRED
 else
         INRED=${1}
 fi
 if [ -z ${2} ]; then
-        read -p "Download YELLOW >=: " INYELLOW
+        read -p "Input YELLOW >=: " INYELLOW
 else
         INYELLOW=${2}
 fi
 if [ -z ${3} ]; then
-        read -p "Upload RED >=: " OUTRED
+        read -p "Output RED >=: " OUTRED
 else
         OUTRED=${3}
 fi
 if [ -z ${4} ]; then
-        read -p "Upload YELLOW >=: " OUTYELLOW
+        read -p "Output YELLOW >=: " OUTYELLOW
 else
         OUTYELLOW=${4}
 fi
@@ -188,7 +188,7 @@ done
 
 ##Execute
 echo "SNMP Monitor v${VERSION}"
-echo "Usage:  ./monitor.sh <NODEIP> <COMMUNITY> <IF_INDEX> <INTERVAL>"
+echo "Usage:  ./monitor.sh <NODEIP> <COMMUNITY> <IF_INDEX> <INTERVAL> <INPUT_RED> <INPUT_YELLOW> <OUTPUT_RED> <OUTPUT_YELLOW>"
 prechecks
 get_variables ${1} ${2} ${3} ${4}
 get_thresholds ${5} ${6} ${7} ${8}
