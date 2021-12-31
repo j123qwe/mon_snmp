@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##Variables
-VERSION=21.12.29.1
+VERSION=21.12.2
 SCRIPTDIR=$(pwd)
 TMPDIR=${SCRIPTDIR}/tmp
 
@@ -43,6 +43,22 @@ debian_package_install(){
     fi
 }
 
+colorize(){
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+RED=$(tput setaf 1)
+NORMAL=$(tput sgr0)
+if [ ${1} == "GREEN" ]; then
+	printf "${GREEN}${2}${NORMAL}"
+elif [ ${1} == "YELLOW" ]; then
+	printf "${YELLOW}${2}${NORMAL}"
+elif [ ${1} == "RED" ]; then
+	printf "${RED}${2}${NORMAL}"
+elif [ ${1} == "NORMAL" ]; then
+	printf "${NORMAL}${2}${NORMAL}"
+fi
+}
+
 get_variables(){
 echo ""
 if [ -z ${1} ]; then
@@ -65,6 +81,7 @@ if [ -z ${4} ]; then
 else
 	REFRESH=${4}
 fi
+REFRESH=$(expr ${REFRESH} - 1)
 }
 
 get_int_list(){
@@ -95,40 +112,6 @@ set_int_id(){
 	read -p "Enter Interface ID: " ID
 }
 
-monitor_int(){
-	SYSNAME=$(snmpget -v2c -c ${COMMUNITY} ${NODE} -Ovq iso.3.6.1.2.1.1.5.0)
-	INTNAME=$(snmpget -v2c -c ${COMMUNITY} ${NODE} -Ovq IF-MIB::ifName.${ID})
-	printf "Getting counters from ${SYSNAME} (${NODE}), interface ${INTNAME} (${ID}). Please wait...\n\n"
-	A_TIME=$(date +%s.%N)
-	A_IN=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.6.${ID})
-	A_OUT=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.10.${ID})
-	while true; do
-		sleep ${REFRESH}
-		TIME=$(date +%H:%M:%S.%N)
-		B_TIME=$(date +%s.%N)
-		B_IN=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.6.${ID})
-		B_OUT=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.10.${ID})
-		C_IN=$(expr ${B_IN} - ${A_IN})
-		C_OUT=$(expr ${B_OUT} - ${A_OUT})
-		C_TIME=$(echo "${B_TIME} - ${A_TIME}" | bc)
-		A_TIME=${B_TIME}
-		A_IN=${B_IN}
-		A_OUT=${B_OUT}
-		IN=$(echo "scale=2;((${C_IN} * 8) / ${C_TIME}) / 1000 / 1000" | bc)
-		OUT=$(echo "scale=2;((${C_OUT} * 8) / ${C_TIME}) / 1000 / 1000" | bc)
-                ININT=$(echo "${IN} * 100" | bc | cut -d. -f1)
-                OUTINT=$(echo "${OUT} * 100" | bc | cut -d. -f1)
-		if [ "${ININT}" -ge "${INRED}" ] || [ "${OUTINT}" -ge "${OUTRED}" ]; then
-			colorize RED "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
-		elif [ "${ININT}" -ge "${INYELLOW}" ] || [ "${OUTINT}" -ge "${OUTYELLOW}" ]; then
-			colorize YELLOW "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
-		else
-			colorize GREEN "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
-		fi
-	done
-
-}
-
 get_thresholds(){
 if [ -z ${1} ]; then
 	echo "Please enter thresholds (in Mbps):"
@@ -157,20 +140,39 @@ OUTRED=$(echo "${OUTRED} * 100" | bc)
 OUTYELLOW=$(echo "${OUTYELLOW} * 100" | bc)
 }
 
-colorize(){
-GREEN=$(tput setaf 2)
-YELLOW=$(tput setaf 3)
-RED=$(tput setaf 1)
-NORMAL=$(tput sgr0)
-if [ ${1} == "GREEN" ]; then
-	printf "${GREEN}${2}${NORMAL}"
-elif [ ${1} == "YELLOW" ]; then
-	printf "${YELLOW}${2}${NORMAL}"
-elif [ ${1} == "RED" ]; then
-	printf "${RED}${2}${NORMAL}"
-elif [ ${1} == "NORMAL" ]; then
-	printf "${NORMAL}${2}${NORMAL}"
-fi
+monitor_int(){
+	SYSNAME=$(snmpget -v2c -c ${COMMUNITY} ${NODE} -Ovq iso.3.6.1.2.1.1.5.0)
+	INTNAME=$(snmpget -v2c -c ${COMMUNITY} ${NODE} -Ovq IF-MIB::ifName.${ID})
+	printf "Getting counters from ${SYSNAME} (${NODE}), interface ${INTNAME} (${ID}). Please wait...\n\n"
+	A_TIME=$(date +%s.%N)
+	A_IN=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.6.${ID})
+	A_OUT=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.10.${ID})
+	while sleep ${REFRESH}.$((1999999999 - 1$(date +%N))); do
+	# while true; do
+		# sleep ${REFRESH}
+		TIME=$(date +%H:%M:%S.%N)
+		B_TIME=$(date +%s.%N)
+		B_IN=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.6.${ID})
+		B_OUT=$(snmpget -v2c -c ${COMMUNITY} -Ovq ${NODE} 1.3.6.1.2.1.31.1.1.1.10.${ID})
+		C_IN=$(expr ${B_IN} - ${A_IN})
+		C_OUT=$(expr ${B_OUT} - ${A_OUT})
+		C_TIME=$(echo "${B_TIME} - ${A_TIME}" | bc)
+		A_TIME=${B_TIME}
+		A_IN=${B_IN}
+		A_OUT=${B_OUT}
+		IN=$(echo "scale=2;((${C_IN} * 8) / ${C_TIME}) / 1000 / 1000" | bc | awk ' { printf "%07.2f\n", $1 } ')
+		OUT=$(echo "scale=2;((${C_OUT} * 8) / ${C_TIME}) / 1000 / 1000" | bc | awk ' { printf "%07.2f\n", $1 } ') 
+                ININT=$(echo "${IN} * 100" | bc | cut -d. -f1)
+                OUTINT=$(echo "${OUT} * 100" | bc | cut -d. -f1)
+		if [ "${ININT}" -ge "${INRED}" ] || [ "${OUTINT}" -ge "${OUTRED}" ]; then
+			colorize RED "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
+		elif [ "${ININT}" -ge "${INYELLOW}" ] || [ "${OUTINT}" -ge "${OUTYELLOW}" ]; then
+			colorize YELLOW "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
+		else
+			colorize GREEN "${TIME}\t|\tIn: ${IN}Mbps\t|\tOut: ${OUT}Mbps\n"
+		fi
+	done
+
 }
 
 begin_monitor(){
